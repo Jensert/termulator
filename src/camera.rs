@@ -4,6 +4,9 @@ pub struct Camera {
     pub pos: Vec3,
     pub fov: f64,
 
+    pub near_plane: f64,
+    pub far_plane: f64,
+
     pub yaw: f64,
     pub pitch: f64,
 
@@ -14,7 +17,10 @@ impl Camera {
     pub fn default() -> Self {
         Self {
             pos: Vec3::new(0.0, 0.0, -1.0),
-            fov: 90.0,
+            fov: 45.0,
+
+            near_plane: 0.1,
+            far_plane: 100.0,
 
             yaw: 0.0,
             pitch: 0.0,
@@ -70,7 +76,7 @@ impl Camera {
         (x, y)
     }
 
-    fn apply_view_transform(&self, point: Vec3) -> Vec3 {
+    pub fn apply_view_transform(&self, point: Vec3) -> Vec3 {
         // create rotation matrices for yaw and pitch
         let yaw_rad = -self.yaw.to_radians();
         let pitch_rad = -self.pitch.to_radians();
@@ -92,26 +98,26 @@ impl Camera {
         result
     }
 
-    pub fn clip_line_to_near_plane(&self, v1: Vec3, v2: Vec3, near_z: f64) -> Option<(Vec3, Vec3)> {
+    pub fn clip_line_to_near_plane(&self, v1: Vec3, v2: Vec3) -> Option<(Vec3, Vec3)> {
         // Check if both points are behind the camera
-        if v1.z <= near_z && v2.z <= near_z {
+        if v1.z <= self.near_plane && v2.z <= self.near_plane {
             return None;
         }
 
         // If both points are in front of the near plane, no clipping needed
-        if v1.z > near_z && v2.z > near_z {
+        if v1.z > self.near_plane && v2.z > self.near_plane {
             return Some((v1, v2));
         }
 
         // One point is behind, one is in front - we need to clip
-        let t = (near_z - v1.z) / (v2.z - v1.z);
+        let t = (self.near_plane - v1.z) / (v2.z - v1.z);
         let intersection = Vec3 {
             x: v1.x + t * (v2.x - v1.x),
             y: v1.y + t * (v2.y - v1.y),
-            z: near_z,
+            z: self.near_plane,
         };
 
-        if v1.z > near_z {
+        if v1.z > self.near_plane {
             return Some((v1, intersection));
         } else {
             return Some((intersection, v2));

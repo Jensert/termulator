@@ -3,7 +3,7 @@ mod camera;
 mod types;
 
 use app::App;
-use types::Vec3;
+use types::{MyShapes, Vec3};
 
 use color_eyre::Result;
 use crossterm::ExecutableCommand;
@@ -87,31 +87,7 @@ fn main() -> Result<()> {
 }
 
 fn run(mut app: App, mut terminal: DefaultTerminal) -> Result<()> {
-    let cube_vertices = [
-        Vec3::new(-0.5, -0.5, 3.5),
-        Vec3::new(0.5, -0.5, 3.5),
-        Vec3::new(0.5, 0.5, 3.5),
-        Vec3::new(-0.5, 0.5, 3.5),
-        Vec3::new(-0.5, -0.5, 2.5),
-        Vec3::new(0.5, -0.5, 2.5),
-        Vec3::new(0.5, 0.5, 2.5),
-        Vec3::new(-0.5, 0.5, 2.5),
-    ];
-
-    let cube_edges = [
-        (0, 1),
-        (1, 2),
-        (2, 3),
-        (3, 0),
-        (4, 5),
-        (5, 6),
-        (6, 7),
-        (7, 4),
-        (0, 4),
-        (1, 5),
-        (2, 6),
-        (3, 7),
-    ];
+    let shapes = MyShapes::create_shapes();
 
     loop {
         terminal.draw(|frame| {
@@ -122,9 +98,9 @@ fn run(mut app: App, mut terminal: DefaultTerminal) -> Result<()> {
                 .marker(ratatui::symbols::Marker::Braille)
                 .background_color(Color::Blue)
                 .paint(|ctx| {
-                    for &(start_idx, end_idx) in &cube_edges {
-                        let start_vertex = cube_vertices[start_idx];
-                        let end_vertex = cube_vertices[end_idx];
+                    for &(start_idx, end_idx) in &shapes._cube_edges {
+                        let start_vertex = shapes._cube_vertices[start_idx];
+                        let end_vertex = shapes._cube_vertices[end_idx];
 
                         let start = start_vertex - app.camera.pos;
                         let end = end_vertex - app.camera.pos;
