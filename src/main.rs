@@ -1,7 +1,13 @@
-use color_eyre::Result;
+mod app;
+mod camera;
+mod types;
 
+use app::App;
+use types::Vec3;
+
+use color_eyre::Result;
 use crossterm::ExecutableCommand;
-use crossterm::event::{self, Event, KeyCode};
+
 use ratatui::{
     DefaultTerminal,
     style::Color,
@@ -10,269 +16,59 @@ use ratatui::{
         canvas::{Canvas, Line},
     },
 };
-#[derive(Debug, Clone, Copy)]
-struct Vec3 {
-    x: f64,
-    y: f64,
-    z: f64,
-}
 
-impl Vec3 {
-    fn new(x: f64, y: f64, z: f64) -> Self {
-        Self { x, y, z }
-    }
-}
+fn clip_line_to_viewport(
+    x1: f64,
+    y1: f64,
+    x2: f64,
+    y2: f64,
+    xmin: f64,
+    xmax: f64,
+    ymin: f64,
+    ymax: f64,
+) -> Option<(f64, f64, f64, f64)> {
+    let dx = x2 - x1;
+    let dy = y2 - y1;
 
-impl std::ops::Sub for Vec3 {
-    type Output = Vec3;
-    fn sub(self, rhs: Self) -> Self::Output {
-        Self {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-            z: self.z - rhs.z,
+    let mut t0 = 0.0;
+    let mut t1 = 1.0;
+
+    let clip = |p: f64, q: f64, t0: &mut f64, t1: &mut f64| -> bool {
+        if p == 0.0 {
+            return q >= 0.0;
         }
-    }
-}
-impl std::ops::Add for Vec3 {
-    type Output = Vec3;
-    fn add(self, rhs: Self) -> Self::Output {
-        Self {
-            x: self.x + rhs.x,
-            y: self.y + rhs.y,
-            z: self.z + rhs.z,
-        }
-    }
-}
-impl std::ops::Mul<f64> for Vec3 {
-    type Output = Vec3;
-    fn mul(self, rhs: f64) -> Self::Output {
-        Self {
-            x: self.x * rhs,
-            y: self.y * rhs,
-            z: self.z * rhs,
-        }
-    }
-}
-
-#[derive(Debug)]
-struct Camera {
-    pos: Vec3,
-    fov: f64,
-
-    yaw: f64,
-    pitch: f64,
-
-    move_speed: f64,
-    rotate_speed: f64,
-}
-impl Camera {
-    fn default() -> Self {
-        Self {
-            pos: Vec3::new(0.0, 0.0, -1.0),
-            fov: 90.0,
-
-            yaw: 0.0,
-            pitch: 0.0,
-
-            move_speed: 0.1,
-            rotate_speed: 5.0,
-        }
-    }
-
-    fn forward(&self) -> Vec3 {
-        let yaw_rad = self.yaw.to_radians();
-        let pitch_rad = self.pitch.to_radians();
-
-        Vec3 {
-            x: pitch_rad.cos() * yaw_rad.sin(),
-            y: pitch_rad.sin(),
-            z: pitch_rad.cos() * yaw_rad.cos(),
-        }
-    }
-
-    fn right(&self) -> Vec3 {
-        let yaw_rad = self.yaw.to_radians();
-        Vec3 {
-            x: yaw_rad.cos(),
-            y: 0.0,
-            z: -yaw_rad.sin(),
-        }
-    }
-    fn forward_movement(&self) -> Vec3 {
-        let yaw_rad = self.yaw.to_radians();
-
-        Vec3 {
-            x: yaw_rad.sin(),
-            y: 0.0,
-            z: yaw_rad.cos(),
-        }
-    }
-
-    fn project_vertex(&self, vertex: &Vec3) -> (f64, f64) {
-        // first apply view transformation
-        let view_space = self.apply_view_transform(*vertex - self.pos);
-
-        // we dont want to project points behind the camera
-        if view_space.z <= 0.0 {
-            return (10.0, 10.0); // Place points behind camera off-screen
-        }
-
-        // Now do perspective projection
-        let scale = (self.fov / 2.0).to_radians().tan();
-        let aspect_ratio = 9.0 / 16.0;
-        let x = (view_space.x / (scale * view_space.z)) * aspect_ratio;
-        let y = view_space.y / (scale * view_space.z);
-        (x, y)
-    }
-
-    fn apply_view_transform(&self, point: Vec3) -> Vec3 {
-        // create rotation matrices for yaw and pitch
-        let yaw_rad = -self.yaw.to_radians();
-        let pitch_rad = -self.pitch.to_radians();
-
-        // First rotate around Y axis (yaw)
-        let mut result = Vec3 {
-            x: point.x * yaw_rad.cos() + point.z * yaw_rad.sin(),
-            y: point.y,
-            z: -point.x * yaw_rad.sin() + point.z * yaw_rad.cos(),
-        };
-
-        // Then rotate around X axis (pitch)
-        result = Vec3 {
-            x: result.x,
-            y: result.y * pitch_rad.cos() - result.z * pitch_rad.sin(),
-            z: result.y * pitch_rad.sin() + result.z * pitch_rad.cos(),
-        };
-
-        result
-    }
-}
-
-struct App {
-    should_quit: bool,
-    camera: Camera,
-}
-impl App {
-    fn default() -> Self {
-        Self {
-            should_quit: false,
-            camera: Camera::default(),
-        }
-    }
-
-    fn get_event(&self) -> Result<Option<Event>> {
-        if event::poll(core::time::Duration::from_millis(500))? {
-            // It's guaranteed that the `read()` won't block when the `poll()`
-            // function returns `true`
-            Ok(Some(event::read()?))
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn process_event(&self, event: Option<Event>) -> Result<Action> {
-        match event {
-            Some(Event::FocusGained) => Ok(Action::None),
-            Some(Event::FocusLost) => Ok(Action::None),
-            Some(Event::Key(event)) => {
-                if !event.is_press() {
-                    return Ok(Action::None);
-                }
-
-                match event.code {
-                    KeyCode::Char(c) => match c {
-                        'Q' => Ok(Action::Quit), // Quit app
-
-                        'a' => Ok(Action::Move(Direction::Left)),
-                        'd' => Ok(Action::Move(Direction::Right)),
-                        'w' => Ok(Action::Move(Direction::Forward)),
-                        's' => Ok(Action::Move(Direction::Backward)),
-                        ' ' => Ok(Action::Move(Direction::Up)),
-                        'k' => Ok(Action::Move(Direction::Up)),
-                        'j' => Ok(Action::Move(Direction::Down)),
-                        _ => {
-                            println!("{:?}", event);
-                            Ok(Action::None)
-                        }
-                    },
-
-                    KeyCode::Left => Ok(Action::Look(Direction::Left)),
-                    KeyCode::Right => Ok(Action::Look(Direction::Right)),
-                    KeyCode::Up => Ok(Action::Look(Direction::Up)),
-                    KeyCode::Down => Ok(Action::Look(Direction::Down)),
-                    _ => {
-                        println!("{:?}", event);
-                        Ok(Action::None)
-                    }
-                }
+        let r = q / p;
+        if p < 0.0 {
+            if r > *t1 {
+                return false;
             }
-            Some(Event::Mouse(_event)) => Ok(Action::None),
-            Some(Event::Paste(_string)) => Ok(Action::None),
-            Some(Event::Resize(_x, _y)) => Ok(Action::None),
-            _ => Ok(Action::None),
+            if r > *t0 {
+                *t0 = r;
+            }
+        } else {
+            if r < *t0 {
+                return false;
+            }
+            if r < *t1 {
+                *t1 = r;
+            }
         }
-    }
+        true
+    };
 
-    fn process_action(&mut self, action: Action) {
-        match action {
-            Action::Quit => self.should_quit = true,
-            Action::Move(direction) => match direction {
-                Direction::Forward => {
-                    self.camera.pos =
-                        self.camera.pos + self.camera.forward_movement() * self.camera.move_speed
-                }
-                Direction::Backward => {
-                    self.camera.pos =
-                        self.camera.pos - self.camera.forward_movement() * self.camera.move_speed
-                }
-                Direction::Left => {
-                    self.camera.pos = self.camera.pos - self.camera.right() * self.camera.move_speed
-                }
-                Direction::Right => {
-                    self.camera.pos = self.camera.pos + self.camera.right() * self.camera.move_speed
-                }
-                Direction::Up => {
-                    self.camera.pos.y = self.camera.pos.y + self.camera.move_speed;
-                }
-                Direction::Down => {
-                    self.camera.pos.y = self.camera.pos.y - self.camera.move_speed;
-                }
-            },
-            Action::Look(direction) => match direction {
-                Direction::Up => {
-                    self.camera.pitch += self.camera.rotate_speed;
-                    self.camera.pitch = self.camera.pitch.clamp(-89.0, 89.0);
-                }
-                Direction::Down => {
-                    self.camera.pitch -= self.camera.rotate_speed;
-                    self.camera.pitch = self.camera.pitch.clamp(-89.0, 89.0);
-                }
-                Direction::Left => {
-                    self.camera.yaw -= self.camera.rotate_speed;
-                }
-                Direction::Right => {
-                    self.camera.yaw += self.camera.rotate_speed;
-                }
-                _ => (), // Skip forward and backward
-            },
-            Action::None => (),
-        }
+    if clip(-dx, x1 - xmin, &mut t0, &mut t1)
+        && clip(dx, xmax - x1, &mut t0, &mut t1)
+        && clip(-dy, y1 - ymin, &mut t0, &mut t1)
+        && clip(dy, ymax - y1, &mut t0, &mut t1)
+    {
+        let nx1 = x1 + t0 * dx;
+        let ny1 = y1 + t0 * dy;
+        let nx2 = x1 + t1 * dx;
+        let ny2 = y1 + t1 * dy;
+        Some((nx1, ny1, nx2, ny2))
+    } else {
+        None
     }
-}
-
-enum Action {
-    Quit,
-    Move(Direction),
-    Look(Direction),
-    None,
-}
-enum Direction {
-    Forward,
-    Backward,
-    Left,
-    Right,
-    Up,
-    Down,
 }
 
 fn main() -> Result<()> {
@@ -327,24 +123,32 @@ fn run(mut app: App, mut terminal: DefaultTerminal) -> Result<()> {
                 .background_color(Color::Blue)
                 .paint(|ctx| {
                     for &(start_idx, end_idx) in &cube_edges {
-                        let start = cube_vertices[start_idx] - app.camera.pos;
-                        let end = cube_vertices[end_idx] - app.camera.pos;
+                        let start_vertex = cube_vertices[start_idx];
+                        let end_vertex = cube_vertices[end_idx];
+
+                        let start = start_vertex - app.camera.pos;
+                        let end = end_vertex - app.camera.pos;
 
                         let (x1, y1) = app.camera.project_vertex(&start);
                         let (x2, y2) = app.camera.project_vertex(&end);
-                        let color = Color::White;
-                        ctx.draw(&Line {
-                            x1,
-                            y1,
-                            x2,
-                            y2,
-                            color,
-                        });
+
+                        if let Some((x1, y1, x2, y2)) =
+                            clip_line_to_viewport(x1, y1, x2, y2, -1.0, 1.0, -1.0, 1.0)
+                        {
+                            let color = Color::White;
+                            ctx.draw(&Line {
+                                x1,
+                                y1,
+                                x2,
+                                y2,
+                                color,
+                            });
+                        }
                     }
                 });
 
             let debug_info = Paragraph::new(format!(
-                "pos: {:?} \nyaw: {:.1}, \npitch: {:.1}",
+                "pos: {:?} \nyaw: {:.1}, \npitch: {:.1}\n",
                 app.camera.pos, app.camera.yaw, app.camera.pitch
             ));
 
