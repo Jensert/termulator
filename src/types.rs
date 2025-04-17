@@ -10,6 +10,27 @@ impl Vec3 {
     pub fn new(x: f64, y: f64, z: f64) -> Self {
         Self { x, y, z }
     }
+
+    pub fn length(&self) -> f64 {
+        (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
+    }
+
+    pub fn normalize(&self) -> Vec3 {
+        let len = self.length();
+        if len == 0.0 {
+            Vec3::new(0.0, 0.0, 0.0)
+        } else {
+            Vec3::new(self.x / len, self.y / len, self.z / len)
+        }
+    }
+
+    pub fn cross(&self, other: Vec3) -> Vec3 {
+        Vec3 {
+            x: self.y * other.z - self.z * other.y,
+            y: self.z * other.x - self.x * other.z,
+            z: self.x * other.y - self.y * other.z,
+        }
+    }
 }
 
 impl std::ops::Sub for Vec3 {
@@ -43,6 +64,46 @@ impl std::ops::Mul<f64> for Vec3 {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+
+pub struct Vec2 {
+    pub x: f64,
+    pub y: f64,
+}
+
+impl Vec2 {
+    pub fn new(x: f64, y: f64) -> Self {
+        Self { x, y }
+    }
+}
+
+impl std::ops::Sub for Vec2 {
+    type Output = Vec2;
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        }
+    }
+}
+impl std::ops::Add for Vec2 {
+    type Output = Vec2;
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
+    }
+}
+impl std::ops::Mul<f64> for Vec2 {
+    type Output = Vec2;
+    fn mul(self, rhs: f64) -> Self::Output {
+        Self {
+            x: self.x * rhs,
+            y: self.y * rhs,
+        }
+    }
+}
 pub struct MyShapes {
     pub _cube_vertices: [Vec3; 8],
     pub _cube_edges: [(usize, usize); 12],

@@ -124,8 +124,8 @@ fn run(mut app: App, mut terminal: DefaultTerminal) -> Result<()> {
                 });
 
             let debug_info = Paragraph::new(format!(
-                "pos: {:?} \nyaw: {:.1}, \npitch: {:.1}\ndrawmode: {:?}",
-                app.camera.pos, app.camera.yaw, app.camera.pitch, app.draw_mode
+                "terminal size: {:?}\naspect ratio {:?}\ndrawmode: {:?}\n\ncamera pos: {:?} \nyaw: {:.1}, \npitch: {:.1}",
+                app.terminal_size, app.camera.aspect_ratio, app.draw_mode, app.camera.pos, app.camera.yaw, app.camera.pitch
             ));
 
             frame.render_widget(canvas, area);

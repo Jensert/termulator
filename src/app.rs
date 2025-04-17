@@ -1,4 +1,5 @@
 use crate::camera::Camera;
+use crate::types::Vec2;
 use color_eyre::Result;
 use crossterm::event;
 use crossterm::event::Event;
@@ -6,8 +7,8 @@ use crossterm::event::KeyCode;
 
 pub struct App {
     pub should_quit: bool,
+    pub terminal_size: Vec2,
     pub camera: Camera,
-
     pub draw_mode: ratatui::symbols::Marker,
 }
 impl App {
@@ -15,9 +16,13 @@ impl App {
         Self {
             should_quit: false,
             camera: Camera::default(),
-
+            terminal_size: Vec2 { x: 10.0, y: 10.0 },
             draw_mode: ratatui::symbols::Marker::Braille,
         }
+    }
+
+    pub fn get_aspect_ratio(&mut self) -> f64 {
+        self.terminal_size.y / self.terminal_size.x * 2.25 // *2.25 to adjust for difference in row and column width / height
     }
 
     pub fn get_event(&self) -> Result<Option<Event>> {
@@ -78,7 +83,10 @@ impl App {
             }
             Some(Event::Mouse(_event)) => Ok(Action::None),
             Some(Event::Paste(_string)) => Ok(Action::None),
-            Some(Event::Resize(_x, _y)) => Ok(Action::None),
+            Some(Event::Resize(x, y)) => Ok(Action::ChangeWindowSize(Vec2 {
+                x: x as f64,
+                y: y as f64,
+            })),
             _ => Ok(Action::None),
         }
     }
@@ -127,6 +135,11 @@ impl App {
             },
             Action::ChangeDrawMode(mode) => self.draw_mode = mode,
 
+            Action::ChangeWindowSize(size) => {
+                self.terminal_size = size;
+                self.camera.aspect_ratio = self.get_aspect_ratio()
+            }
+
             Action::None => (),
         }
     }
@@ -137,6 +150,7 @@ pub enum Action {
     Move(Direction),
     Look(Direction),
     ChangeDrawMode(ratatui::symbols::Marker),
+    ChangeWindowSize(Vec2),
     None,
 }
 

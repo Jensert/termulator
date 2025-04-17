@@ -3,6 +3,7 @@ use crate::types::Vec3;
 pub struct Camera {
     pub pos: Vec3,
     pub fov: f64,
+    pub aspect_ratio: f64,
 
     pub near_plane: f64,
     pub far_plane: f64,
@@ -18,6 +19,7 @@ impl Camera {
         Self {
             pos: Vec3::new(0.0, 0.0, -1.0),
             fov: 45.0,
+            aspect_ratio: 16.0 / 9.0,
 
             near_plane: 0.1,
             far_plane: 100.0,
@@ -70,8 +72,8 @@ impl Camera {
 
         // Now do perspective projection
         let scale = (self.fov / 2.0).to_radians().tan();
-        let aspect_ratio = 9.0 / 16.0;
-        let x = (view_space.x / (scale * view_space.z)) * aspect_ratio;
+
+        let x = (view_space.x / (scale * view_space.z)) * self.aspect_ratio;
         let y = view_space.y / (scale * view_space.z);
         (x, y)
     }
@@ -98,7 +100,7 @@ impl Camera {
         result
     }
 
-    pub fn clip_line_to_near_plane(&self, v1: Vec3, v2: Vec3) -> Option<(Vec3, Vec3)> {
+    pub fn _clip_line_to_near_plane(&self, v1: Vec3, v2: Vec3) -> Option<(Vec3, Vec3)> {
         // Check if both points are behind the camera
         if v1.z <= self.near_plane && v2.z <= self.near_plane {
             return None;
@@ -121,6 +123,26 @@ impl Camera {
             return Some((v1, intersection));
         } else {
             return Some((intersection, v2));
+        }
+    }
+
+    pub fn cast_ray(&self, u: f64, v: f64) {
+        let fov_rad = (self.fov.to_radians() / 2.0).tan();
+
+        let x = u * fov_rad * self.aspect_ratio;
+        let y = v * fov_rad;
+        let ray_camera = Vec3::new(x, y, 1.0).normalize();
+    }
+
+    pub fn camera_to_world(&self, dir: Vec3) -> Vec3 {
+        let forward = self.forward().normalize();
+        let right = self.right().normalize();
+        let up = forward.cross(right).normalize();
+
+        Vec3 {
+            x: dir.x * right.x + dir.y * up.x + dir.z * forward.x,
+            y: dir.x * right.y + dir.y * up.y + dir.z * forward.y,
+            z: dir.x * right.z + dir.y * up.z + dir.z * forward.z,
         }
     }
 }
