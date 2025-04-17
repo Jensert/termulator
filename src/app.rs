@@ -1,8 +1,3 @@
-mod action;
-mod direction;
-
-use crate::app::action::Action;
-use crate::app::direction::Direction;
 use crate::camera::Camera;
 use color_eyre::Result;
 use crossterm::event;
@@ -12,12 +7,16 @@ use crossterm::event::KeyCode;
 pub struct App {
     pub should_quit: bool,
     pub camera: Camera,
+
+    pub draw_mode: ratatui::symbols::Marker,
 }
 impl App {
     pub fn default() -> Self {
         Self {
             should_quit: false,
             camera: Camera::default(),
+
+            draw_mode: ratatui::symbols::Marker::Braille,
         }
     }
 
@@ -55,6 +54,16 @@ impl App {
                             println!("{:?}", event);
                             Ok(Action::None)
                         }
+                    },
+
+                    KeyCode::F(n) => match n {
+                        1 => Ok(Action::ChangeDrawMode(ratatui::symbols::Marker::Braille)),
+                        2 => Ok(Action::ChangeDrawMode(ratatui::symbols::Marker::Dot)),
+                        3 => Ok(Action::ChangeDrawMode(ratatui::symbols::Marker::HalfBlock)),
+                        4 => Ok(Action::ChangeDrawMode(ratatui::symbols::Marker::Block)),
+                        5 => Ok(Action::ChangeDrawMode(ratatui::symbols::Marker::Bar)),
+
+                        _ => Ok(Action::None),
                     },
 
                     KeyCode::Left => Ok(Action::Look(Direction::Left)),
@@ -116,7 +125,26 @@ impl App {
                 }
                 _ => (), // Skip forward and backward
             },
+            Action::ChangeDrawMode(mode) => self.draw_mode = mode,
+
             Action::None => (),
         }
     }
+}
+
+pub enum Action {
+    Quit,
+    Move(Direction),
+    Look(Direction),
+    ChangeDrawMode(ratatui::symbols::Marker),
+    None,
+}
+
+pub enum Direction {
+    Forward,
+    Backward,
+    Left,
+    Right,
+    Up,
+    Down,
 }

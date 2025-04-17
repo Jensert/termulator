@@ -3,18 +3,18 @@ mod camera;
 mod types;
 
 use app::App;
-use types::{MyShapes, Vec3};
+use types::MyShapes;
 
 use color_eyre::Result;
 use crossterm::ExecutableCommand;
 
 use ratatui::{
-    DefaultTerminal,
     style::Color,
     widgets::{
-        Paragraph,
         canvas::{Canvas, Line},
+        Paragraph,
     },
+    DefaultTerminal,
 };
 
 fn clip_line_to_viewport(
@@ -95,7 +95,7 @@ fn run(mut app: App, mut terminal: DefaultTerminal) -> Result<()> {
             let canvas = Canvas::default()
                 .x_bounds([-1.0, 1.0])
                 .y_bounds([-1.0, 1.0])
-                .marker(ratatui::symbols::Marker::Braille)
+                .marker(app.draw_mode)
                 .background_color(Color::Blue)
                 .paint(|ctx| {
                     for &(start_idx, end_idx) in &shapes._cube_edges {
@@ -111,7 +111,7 @@ fn run(mut app: App, mut terminal: DefaultTerminal) -> Result<()> {
                         if let Some((x1, y1, x2, y2)) =
                             clip_line_to_viewport(x1, y1, x2, y2, -1.0, 1.0, -1.0, 1.0)
                         {
-                            let color = Color::White;
+                            let color = Color::Red;
                             ctx.draw(&Line {
                                 x1,
                                 y1,
@@ -124,8 +124,8 @@ fn run(mut app: App, mut terminal: DefaultTerminal) -> Result<()> {
                 });
 
             let debug_info = Paragraph::new(format!(
-                "pos: {:?} \nyaw: {:.1}, \npitch: {:.1}\n",
-                app.camera.pos, app.camera.yaw, app.camera.pitch
+                "pos: {:?} \nyaw: {:.1}, \npitch: {:.1}\ndrawmode: {:?}",
+                app.camera.pos, app.camera.yaw, app.camera.pitch, app.draw_mode
             ));
 
             frame.render_widget(canvas, area);
