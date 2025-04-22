@@ -10,6 +10,7 @@ pub struct App {
     pub terminal_size: Vec2,
     pub camera: Camera,
     pub draw_mode: ratatui::symbols::Marker,
+    pub render_mode: RenderMode,
 }
 impl App {
     pub fn default() -> Self {
@@ -18,6 +19,7 @@ impl App {
             camera: Camera::default(),
             terminal_size: Vec2 { x: 10.0, y: 10.0 },
             draw_mode: ratatui::symbols::Marker::Braille,
+            render_mode: RenderMode::Vertex,
         }
     }
 
@@ -67,6 +69,9 @@ impl App {
                         3 => Ok(Action::ChangeDrawMode(ratatui::symbols::Marker::HalfBlock)),
                         4 => Ok(Action::ChangeDrawMode(ratatui::symbols::Marker::Block)),
                         5 => Ok(Action::ChangeDrawMode(ratatui::symbols::Marker::Bar)),
+
+                        10 => Ok(Action::ChangeRenderMode(RenderMode::Vertex)),
+                        11 => Ok(Action::ChangeRenderMode(RenderMode::Raycast)),
 
                         _ => Ok(Action::None),
                     },
@@ -133,7 +138,9 @@ impl App {
                 }
                 _ => (), // Skip forward and backward
             },
+
             Action::ChangeDrawMode(mode) => self.draw_mode = mode,
+            Action::ChangeRenderMode(mode) => self.render_mode = mode,
 
             Action::ChangeWindowSize(size) => {
                 self.terminal_size = size;
@@ -150,6 +157,7 @@ pub enum Action {
     Move(Direction),
     Look(Direction),
     ChangeDrawMode(ratatui::symbols::Marker),
+    ChangeRenderMode(RenderMode),
     ChangeWindowSize(Vec2),
     None,
 }
@@ -161,4 +169,10 @@ pub enum Direction {
     Right,
     Up,
     Down,
+}
+
+#[derive(Debug)]
+pub enum RenderMode {
+    Vertex,
+    Raycast,
 }

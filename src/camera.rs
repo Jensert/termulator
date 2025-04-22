@@ -126,12 +126,57 @@ impl Camera {
         }
     }
 
-    pub fn cast_ray(&self, u: f64, v: f64) {
+    pub fn cast_ray(&self, u: f64, v: f64) -> Vec3 {
         let fov_rad = (self.fov.to_radians() / 2.0).tan();
 
         let x = u * fov_rad * self.aspect_ratio;
         let y = v * fov_rad;
         let ray_camera = Vec3::new(x, y, 1.0).normalize();
+
+        self.camera_to_world(ray_camera)
+    }
+
+    pub fn check_ray_aabb_intersections(&self, ray_direction: Vec3, min: Vec3, max: Vec3) -> bool {
+        let inv_dir = Vec3 {
+            x: 1.0 / ray_direction.x,
+            y: 1.0 / ray_direction.y,
+            z: 1.0 / ray_direction.z,
+        };
+
+        let mut tmin = (min.x - self.pos.x) * inv_dir.x;
+        let mut tmax = (max.x - self.pos.x) * inv_dir.x;
+        if tmin > tmax {
+            std::mem::swap(&mut tmin, &mut tmax);
+        }
+
+        let mut tymin = (min.y - self.pos.y) * inv_dir.y;
+        let mut tymax = (max.y - self.pos.y) * inv_dir.y;
+        if tymin > tymax {
+            std::mem::swap(&mut tymin, &mut tymax);
+        }
+
+        if (tmin > tymax) || (tymin > tmax) {
+            return false;
+        }
+
+        if tymin > tmin {
+            tmin = tymin;
+        }
+        if tymax < tmax {
+            tmax = tymax;
+        }
+
+        let mut tzmin = (min.z - self.pos.z) * inv_dir.z;
+        let mut tzmax = (max.z - self.pos.z) * inv_dir.z;
+        if tzmin > tzmax {
+            std::mem::swap(&mut tzmin, &mut tzmax);
+        }
+
+        if (tmin > tzmax) || (tzmin > tmax) {
+            return false;
+        }
+
+        true
     }
 
     pub fn camera_to_world(&self, dir: Vec3) -> Vec3 {

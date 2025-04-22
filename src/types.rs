@@ -107,7 +107,7 @@ impl std::ops::Mul<f64> for Vec2 {
 pub struct MyShapes {
     pub _cube_vertices: [Vec3; 8],
     pub _cube_edges: [(usize, usize); 12],
-
+    // pub _cube_bounds: Vec<(Vec3, Vec3)>,
     pub _pyramid_vertices: [Vec3; 5],
     pub _pyramid_edges: [(usize, usize); 8],
 

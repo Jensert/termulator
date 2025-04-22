@@ -2,7 +2,7 @@ mod app;
 mod camera;
 mod types;
 
-use app::App;
+use app::{App, RenderMode};
 use types::MyShapes;
 
 use color_eyre::Result;
@@ -98,34 +98,54 @@ fn run(mut app: App, mut terminal: DefaultTerminal) -> Result<()> {
                 .marker(app.draw_mode)
                 .background_color(Color::Blue)
                 .paint(|ctx| {
-                    for &(start_idx, end_idx) in &shapes._cube_edges {
-                        let start_vertex = shapes._cube_vertices[start_idx];
-                        let end_vertex = shapes._cube_vertices[end_idx];
 
-                        let start = start_vertex - app.camera.pos;
-                        let end = end_vertex - app.camera.pos;
+                    match app.render_mode {
+                        RenderMode::Vertex => {
+                             for &(start_idx, end_idx) in &shapes._cube_edges {
+                                let start_vertex = shapes._cube_vertices[start_idx];
+                                let end_vertex = shapes._cube_vertices[end_idx];
 
-                        let (x1, y1) = app.camera.project_vertex(&start);
-                        let (x2, y2) = app.camera.project_vertex(&end);
+                                let start = start_vertex - app.camera.pos;
+                                let end = end_vertex - app.camera.pos;
 
-                        if let Some((x1, y1, x2, y2)) =
-                            clip_line_to_viewport(x1, y1, x2, y2, -1.0, 1.0, -1.0, 1.0)
-                        {
-                            let color = Color::Red;
-                            ctx.draw(&Line {
-                                x1,
-                                y1,
-                                x2,
-                                y2,
-                                color,
-                            });
+                                let (x1, y1) = app.camera.project_vertex(&start);
+                                let (x2, y2) = app.camera.project_vertex(&end);
+
+                                if let Some((x1, y1, x2, y2)) =
+                                    clip_line_to_viewport(x1, y1, x2, y2, -1.0, 1.0, -1.0, 1.0)
+                                {
+                                    let color = Color::Red;
+                                    ctx.draw(&Line {
+                                        x1,
+                                        y1,
+                                        x2,
+                                        y2,
+                                        color,
+                                    });
+                                }
+                            }       
+                        },
+                        RenderMode::Raycast => {
+                            let rows = app.terminal_size.y as i32;
+                            let cols = app.terminal_size.x as i32;
+                            for row in 0..rows {
+                                for col in 0..cols {
+                                    let u = (col as f64 / app.terminal_size.x) * 2.0 - 1.0;
+                                    let v = 1.0 - (row as f64 / app.terminal_size.y) * 2.0;
+
+                                    let ray_dir = app.camera.cast_ray(u, v);
+
+                                    // IMPLEMENT RENDERING LOGIC HERE
+                                }
+                            }
                         }
                     }
+                    
                 });
 
             let debug_info = Paragraph::new(format!(
-                "terminal size: {:?}\naspect ratio {:?}\ndrawmode: {:?}\n\ncamera pos: {:?} \nyaw: {:.1}, \npitch: {:.1}",
-                app.terminal_size, app.camera.aspect_ratio, app.draw_mode, app.camera.pos, app.camera.yaw, app.camera.pitch
+                "terminal size: {:?}\naspect ratio {:?}\ndrawmode: {:?}\nrendermode: {:?}\n\ncamera pos: {:?} \nyaw: {:.1}, \npitch: {:.1}",
+                app.terminal_size, app.camera.aspect_ratio, app.draw_mode, app.render_mode, app.camera.pos, app.camera.yaw, app.camera.pitch
             ));
 
             frame.render_widget(canvas, area);
