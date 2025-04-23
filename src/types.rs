@@ -120,14 +120,14 @@ pub struct MyShapes {
 impl MyShapes {
     pub fn create_shapes() -> Self {
         let _cube_vertices = [
-            Vec3::new(-0.5, -0.5, 3.5),
-            Vec3::new(0.5, -0.5, 3.5),
-            Vec3::new(0.5, 0.5, 3.5),
-            Vec3::new(-0.5, 0.5, 3.5),
-            Vec3::new(-0.5, -0.5, 2.5),
-            Vec3::new(0.5, -0.5, 2.5),
-            Vec3::new(0.5, 0.5, 2.5),
-            Vec3::new(-0.5, 0.5, 2.5),
+            Vec3::new(-0.1, -0.1, 0.1),
+            Vec3::new(0.1, -0.1, 0.1),
+            Vec3::new(0.1, 0.1, 0.1),
+            Vec3::new(-0.1, 0.1, 0.1),
+            Vec3::new(-0.1, -0.1, -0.1),
+            Vec3::new(0.1, -0.1, -0.1),
+            Vec3::new(0.1, 0.1, -0.1),
+            Vec3::new(-0.1, 0.1, -0.1),
         ];
 
         let _cube_edges = [

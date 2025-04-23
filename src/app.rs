@@ -70,8 +70,8 @@ impl App {
                         4 => Ok(Action::ChangeDrawMode(ratatui::symbols::Marker::Block)),
                         5 => Ok(Action::ChangeDrawMode(ratatui::symbols::Marker::Bar)),
 
-                        10 => Ok(Action::ChangeRenderMode(RenderMode::Vertex)),
-                        11 => Ok(Action::ChangeRenderMode(RenderMode::Raycast)),
+                        8 => Ok(Action::ChangeRenderMode(RenderMode::Vertex)),
+                        9 => Ok(Action::ChangeRenderMode(RenderMode::Raycast)),
 
                         _ => Ok(Action::None),
                     },
